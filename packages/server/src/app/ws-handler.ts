@@ -20,7 +20,7 @@ export class WsHandler {
   }
 
   onSocketConnected(socket: WebSocket, request: IncomingMessage) {
-    this.userManager.add(socket);
+    this.userManager.add(socket, request);
     console.log('New webSocket connection');
 
     socket.on('message', (data) => this.onSocketMessage(socket, data));
