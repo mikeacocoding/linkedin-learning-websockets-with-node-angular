@@ -1,11 +1,15 @@
 import { IncomingMessage } from 'http';
 import { WebSocket, WebSocketServer, ServerOptions, RawData } from 'ws';
+import { UserManager } from './user-manager';
+import { WsMessage } from '@websocket/types';
 
 export class WsHandler {
   private wsServer: WebSocketServer;
+  private userManager: UserManager;
 
   initialize(options: ServerOptions) {
     this.wsServer = new WebSocketServer(options);
+    this.userManager = new UserManager();
 
     this.wsServer.on('listening', () =>
       console.log(`Server listening on port ${options.port}`)
@@ -16,21 +20,24 @@ export class WsHandler {
   }
 
   onSocketConnected(socket: WebSocket, request: IncomingMessage) {
+    this.userManager.add(socket);
     console.log('New webSocket connection');
 
     socket.on('message', (data) => this.onSocketMessage(socket, data));
-    socket.on('close', (code, reason) => this.onSocketClosed(code, reason));
+    socket.on('close', (code, reason) =>
+      this.onSocketClosed(socket, code, reason)
+    );
   }
 
   onSocketMessage(socket: WebSocket, data: RawData) {
-    const payload = JSON.parse(`${data}`);
+    const payload: WsMessage = JSON.parse(`${data}`);
     console.log('Received: ', payload);
 
-    const reply = JSON.stringify({ reply: 'Message received successfully' });
-    socket.send(reply);
+    this.userManager.send(socket, { event: 'chat', contents: 'Hey, still here'});
   }
 
-  onSocketClosed(code: number, reason: Buffer) {
+  onSocketClosed(socket: WebSocket, code: number, reason: Buffer) {
     console.log(`Client has disconnected; code=${code}, reason=${reason}`);
+    this.userManager.remove(socket);
   }
 }
